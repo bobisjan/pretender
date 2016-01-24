@@ -144,7 +144,7 @@ function interceptor(pretender) {
     var uploadEvents = ['progress'];
 
     // properties to copy from the native xhr to fake xhr
-    var lifecycleProps = ['readyState', 'responseText', 'responseXML', 'status', 'statusText'];
+    var lifecycleProps = ['readyState', 'responseText', 'responseXML', 'status', 'statusText', 'response'];
 
     var xhr = fakeXHR._passthroughRequest = new self._nativeXMLHttpRequest();
 
@@ -162,9 +162,14 @@ function interceptor(pretender) {
     function copyLifecycleProperties(propertyNames, fromXHR, toXHR) {
       for (var i = 0; i < propertyNames.length; i++) {
         var prop = propertyNames[i];
-        if (fromXHR[prop]) {
-          toXHR[prop] = fromXHR[prop];
-        }
+        // reading responseText and responseXML throws an exceptions when responseType is not appropriate
+        // see https://xhr.spec.whatwg.org/#the-responsetext-attribute
+        if (
+          (prop !== 'responseText' || xhr.responseType === 'text' || xhr.responseType === '') &&
+          (prop !== 'responseXML' || xhr.responseType === 'document' || xhr.responseType === '') &&
+          xhr[prop]) {
+            fakeXHR[prop] = xhr[prop];
+          }
       }
     }
 
@@ -207,6 +212,7 @@ function interceptor(pretender) {
     if (fakeXHR.async) {
       xhr.timeout = fakeXHR.timeout;
       xhr.withCredentials = fakeXHR.withCredentials;
+      xhr.responseType = fakeXHR.responseType || '';
     }
     for (var h in fakeXHR.requestHeaders) {
       xhr.setRequestHeader(h, fakeXHR.requestHeaders[h]);
