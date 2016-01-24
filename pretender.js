@@ -95,7 +95,9 @@ function Pretender(/* routeMap1, routeMap2, ...*/) {
 
   // reference the native XMLHttpRequest object so
   // it can be restored later
-  this._nativeXMLHttpRequest = self.XMLHttpRequest;
+  if (!self._nativeXMLHttpRequest) {
+    self._nativeXMLHttpRequest = self.XMLHttpRequest;
+  }
 
   // capture xhr requests, channeling them into
   // the route map.
@@ -144,7 +146,7 @@ function interceptor(pretender) {
     // properties to copy from the native xhr to fake xhr
     var lifecycleProps = ['readyState', 'responseText', 'responseXML', 'status', 'statusText'];
 
-    var xhr = fakeXHR._passthroughRequest = new pretender._nativeXMLHttpRequest();
+    var xhr = fakeXHR._passthroughRequest = new self._nativeXMLHttpRequest();
 
     // Use onload if the browser supports it
     if ('onload' in xhr) {
@@ -274,8 +276,10 @@ Pretender.prototype = {
         verb + ' ' + url + ' is undefined or missing.');
     }
 
-    handler.numberOfCalls = 0;
-    handler.async = async;
+    if (handler !== PASSTHROUGH) {
+      handler.numberOfCalls = 0;
+      handler.async = async;
+    }
     this.handlers.push(handler);
 
     var registry = this.hosts.forURL(url)[verb];
@@ -403,7 +407,7 @@ Pretender.prototype = {
     return match;
   },
   shutdown: function shutdown() {
-    self.XMLHttpRequest = this._nativeXMLHttpRequest;
+    self.XMLHttpRequest = self._nativeXMLHttpRequest;
 
     // 'stop' the server
     this.running = false;
